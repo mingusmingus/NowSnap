@@ -6,7 +6,7 @@
   <img src="https://img.shields.io/github/contributors/KennethGomez/LiveShot"  alt="Contributor count"/>
 </p>
 
-# LiveShot
+# NowSanp
 Tool to make enhanced screenshots. Inspired on LightShot
 
 ## How it works
