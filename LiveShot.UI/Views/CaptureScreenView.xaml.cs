@@ -69,8 +69,9 @@ namespace LiveShot.UI.Views
             ColorPickerBtn.Click += ColorPickerBtnOnClick;
             UndoBtn.Click += UndoBtnOnClick;
 
-            UploadBtn.Click += (_, _) => OpenExportWindow();
-            GoogleBtn.Click += (_, _) => OpenExportWindow(true);
+            // TODO: [SUSPENDED] Feature disabled due to instability. Uncomment to restore.
+            // UploadBtn.Click += (_, _) => OpenExportWindow();
+            // GoogleBtn.Click += (_, _) => OpenExportWindow(true);
             CopyBtn.Click += (_, _) => CopyImage();
             SaveBtn.Click += (_, _) => SaveImage();
             CloseBtn.Click += (_, _) => Close();

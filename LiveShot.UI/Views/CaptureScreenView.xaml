@@ -111,6 +111,8 @@
             </Button>
         </panel:RightDragPanel>
         <panel:BottomDragPanel Name="CanvasBottomPanel" Visibility="Hidden" Orientation="Horizontal">
+            <!--
+            // TODO: [SUSPENDED] Feature disabled due to instability. Uncomment to restore.
             <Button ToolTip="{x:Static properties:Resources.CaptureScreen_CanvasButtons_Upload}"
                     Style="{StaticResource FirstLeftCanvasButton}" Name="UploadBtn">
                 <Path Style="{StaticResource CanvasPath}" Data="{StaticResource Upload}" />
@@ -127,6 +129,7 @@
                     Style="{StaticResource CanvasButton}">
                 <Path Style="{StaticResource CanvasPath}" Data="{StaticResource Print}" />
             </Button>
+            -->
             <Button ToolTip="{x:Static properties:Resources.CaptureScreen_CanvasButtons_Copy}"
                     Style="{StaticResource CanvasButton}" Name="CopyBtn">
                 <Path Style="{StaticResource CanvasPath}" Data="{StaticResource Copy}" />
