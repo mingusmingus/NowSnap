@@ -18,12 +18,32 @@ namespace LiveShot.API
             _actions[key].Add(action);
         }
 
+        public void Unsubscribe<T>(Action<Event> action)
+        {
+            var key = typeof(T);
+
+            if (_actions.TryGetValue(key, out var actions))
+            {
+                actions.Remove(action);
+            }
+        }
+
         public void Dispatch<T>(object? e) where T : Event, new()
         {
             if (!_actions.TryGetValue(typeof(T), out var actions))
                 return;
 
-            foreach (var action in actions) action(new T().With(e));
+            foreach (var action in actions)
+            {
+                try
+                {
+                    action(new T().With(e));
+                }
+                catch
+                {
+                    // Ignore error to prevent pipeline breakage
+                }
+            }
         }
     }
 }

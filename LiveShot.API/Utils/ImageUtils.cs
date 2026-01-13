@@ -14,6 +14,9 @@ namespace LiveShot.API.Utils
 {
     public static class ImageUtils
     {
+        [DllImport("gdi32.dll")]
+        public static extern bool DeleteObject(IntPtr hObject);
+
         public static bool CopyImage(Selection selection, Bitmap source, Bitmap canvasBitmap)
         {
             if (selection.Invalid) return false;
@@ -87,12 +90,20 @@ namespace LiveShot.API.Utils
 
         public static BitmapSource GetBitmapSource(Bitmap bitmap)
         {
-            return Imaging.CreateBitmapSourceFromHBitmap(
-                bitmap.GetHbitmap(),
-                IntPtr.Zero,
-                Int32Rect.Empty,
-                BitmapSizeOptions.FromWidthAndHeight(bitmap.Width, bitmap.Height)
-            );
+            IntPtr hBitmap = bitmap.GetHbitmap();
+            try
+            {
+                return Imaging.CreateBitmapSourceFromHBitmap(
+                    hBitmap,
+                    IntPtr.Zero,
+                    Int32Rect.Empty,
+                    BitmapSizeOptions.FromWidthAndHeight(bitmap.Width, bitmap.Height)
+                );
+            }
+            finally
+            {
+                DeleteObject(hBitmap);
+            }
         }
 
         public static Bitmap GetBitmapFromSource(BitmapSource source)

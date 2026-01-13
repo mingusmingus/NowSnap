@@ -24,13 +24,20 @@ namespace LiveShot.API.Utils
 
         public static (float X, float Y) GetScalingFactor()
         {
-            var g = Graphics.FromHwnd(IntPtr.Zero);            
+            using var g = Graphics.FromHwnd(IntPtr.Zero);
             var desktop = g.GetHdc();
 
-            int dpiX = GetDeviceCaps(desktop, (int)DeviceCap.LogPixelsX);
-            int dpiY = GetDeviceCaps(desktop, (int)DeviceCap.LogPixelsY);
+            try
+            {
+                int dpiX = GetDeviceCaps(desktop, (int)DeviceCap.LogPixelsX);
+                int dpiY = GetDeviceCaps(desktop, (int)DeviceCap.LogPixelsY);
 
-            return (dpiX / 96f, dpiY / 96f);
+                return (dpiX / 96f, dpiY / 96f);
+            }
+            finally
+            {
+                g.ReleaseHdc(desktop);
+            }
         }
     }
 }

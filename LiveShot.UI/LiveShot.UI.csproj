@@ -30,8 +30,8 @@
 		<Resource Include="icon.ico">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
 		</Resource>
-		<None Include="bg-icon.ico">
+		<Resource Include="bg-icon.ico">
 			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
-		</None>
+		</Resource>
 	</ItemGroup>
 </Project>
