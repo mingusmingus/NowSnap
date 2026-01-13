@@ -99,6 +99,7 @@ namespace LiveShot.UI.Views
 
         private async Task UploadToGoogleLens(Bitmap bitmap)
         {
+            // TODO: [SUSPENDED] Feature disabled due to instability. Uncomment to restore.
             if (bitmap == null)
             {
                 throw new Exception(API.Properties.Resources.Upload_Failed);
