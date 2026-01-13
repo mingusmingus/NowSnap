@@ -1,0 +1,62 @@
+LIVESHOT_AUDIT_REPORT.txt
+================================================================================
+AUDITORIA INTEGRAL DEL PROYECTO LIVESHOT
+Fecha: 2026-10-24
+Auditor: Jules (Senior Software Architect & Cybersecurity Specialist)
+================================================================================
+
+1. DIAGNÓSTICO DE SALUD GENERAL
+--------------------------------------------------------------------------------
+Puntaje: 4/10
+
+Resumen Ejecutivo:
+El proyecto LiveShot es un híbrido frágil entre .NET 9 moderno y patrones legacy de WinForms/GDI+. Aunque compila en .NET 9, el "core" del manejo de imágenes depende totalmente de `System.Drawing.Common` (GDI+), lo cual introduce riesgos de rendimiento, fugas de memoria y compatibilidad en el futuro, especialmente dado que Microsoft está discontinuando el soporte de GDI+ en entornos no Windows y desaconsejándolo en aplicaciones modernas. La arquitectura sufre de una separación de responsabilidades difusa, donde la capa API maneja lógica de UI (eventos, propiedades de recursos). La seguridad es básica pero funcional, aunque existen vulnerabilidades en el manejo de memoria (fugas de GDI handles). La función de "Google Upload" es un hack que depende de servicios de terceros para funcionar, lo cual es inestable.
+
+2. INVENTARIO DE PROBLEMAS CRÍTICOS
+--------------------------------------------------------------------------------
+[CRÍTICO] Fugas de Memoria GDI+ (ImageUtils.cs):
+- `ImageUtils.GetBitmapSource` llama a `bitmap.GetHbitmap()`. Este método crea un objeto GDI no administrado que *nunca* se libera. Cada captura de pantalla o conversión de imagen reduce los recursos del sistema (GDI Handles) hasta que la aplicación (o Windows) falla. Se DEBE llamar a la función nativa `DeleteObject` para liberar el handle.
+
+[CRÍTICO] Fuga de Device Context (ScreenUtils.cs):
+- `ScreenUtils.GetScalingFactor` obtiene un HDC mediante `Graphics.FromHwnd(IntPtr.Zero).GetHdc()` pero nunca llama a `ReleaseHdc`. Esto agota los contextos de dispositivo del sistema operativo. Además, el objeto `Graphics` creado no se dispone (`using` o `.Dispose()`).
+
+[ALTO] Dependencia de Upload Secuencial para Google Search:
+- La función "Buscar en Google" (`ExportWindowView.xaml.cs`) sube primero la imagen al servicio configurado (ej. Imgur) y luego usa esa URL pública para `google.com/searchbyimage`. Si el servicio de subida falla, es lento, o es privado/local, la búsqueda en Google falla silenciosamente o expone datos privados a un servicio público intermedio no deseado.
+
+[ALTO] Event Pipeline Inseguro (EventPipeline.cs):
+- Implementación ingenua basada en `Action<Event>`. No hay mecanismo para desuscribirse (Unsubscribe), lo que garantiza fugas de memoria en componentes de vida corta que se suscriben a eventos globales.
+- Falta manejo de excepciones: si un suscriptor falla, todo el pipeline se rompe.
+
+[MEDIO] Interoperabilidad Híbrida Ineficiente:
+- Conversión constante entre `System.Windows.Media.Imaging.BitmapSource` (WPF) y `System.Drawing.Bitmap` (GDI+). Esto implica copiar píxeles en memoria repetidamente (locking bits), duplicando el uso de RAM y CPU innecesariamente.
+
+3. MATRIZ DE RIESGOS
+--------------------------------------------------------------------------------
+| Componente             | Riesgo                                      | Impacto                                      |
+|------------------------|---------------------------------------------|----------------------------------------------|
+| System.Drawing.Common  | Obsolescencia / Fugas de Handle             | Crash de la aplicación tras uso prolongado.  |
+| ImgurService           | HttpWebRequest (Legacy)                     | Rendimiento pobre, código difícil de mantener.|
+| Google Search          | Dependencia de URL pública                  | Falla si Imgur cae o cambia API. Privacidad. |
+| Localization           | Strings Hardcoded ("Uploading", "image")    | UI mixta (Español/Inglés).                   |
+| EventPipeline          | Memory Leaks (Strong References)            | Consumo de RAM creciente con el tiempo.      |
+
+4. HOJA DE RUTA DE MODERNIZACIÓN
+--------------------------------------------------------------------------------
+Fase 1: Estabilización (Quick Wins & Critical Fixes)
+1.  **Parchear Fugas GDI+:** Implementar `DeleteObject` en `ImageUtils` y usar `using` correctamente en `ScreenUtils`.
+2.  **Reparar Event Pipeline:** Añadir manejo de excepciones `try/catch` en `Dispatch`.
+3.  **Localización:** Mover strings hardcoded ("Uploading" en `ExportWindowView`, mensajes de error) a `Resources.resx`.
+
+Fase 2: Modernización de Servicios
+4.  **Actualizar HTTP:** Reemplazar `HttpWebRequest` por `HttpClient` e `IHttpClientFactory` en `ImgurService` y `CustomUploadService`.
+5.  **Refactor Google:** Implementar subida directa a Google Lens/Images API si es posible, o advertir al usuario sobre la subida intermedia pública.
+
+Fase 3: Refactorización Estructural (Largo Plazo)
+6.  **Eliminar GDI+:** Migrar toda la lógica de captura y dibujo a primitivas de WPF (`WriteableBitmap`, `VisualBrush`) o bibliotecas modernas como `SkiaSharp`. Esto eliminará `System.Drawing.Common`.
+7.  **Arquitectura:** Mover lógica de UI (Eventos de UI, Recursos de UI) fuera de `LiveShot.API` hacia `LiveShot.Core` (lógica pura) y `LiveShot.UI` (presentación).
+
+5. NOTAS DEL ARQUITECTO
+--------------------------------------------------------------------------------
+- **Efectos de Transparencia:** WPF maneja transparencias nativamente, pero el uso de `AllowsTransparency="True"` puede tener impacto en performance. Dado que ya se usa, asegurar que no se rendericen sombras complejas por software si no es necesario.
+- **Google Lens/OCR:** En lugar de la redirección web actual, considerar integrar una librería de OCR local (como Tesseract o APIs de Windows Media OCR) para extraer texto directamente sin subir la imagen.
+- **Seguridad:** El `ClientId` de Imgur está en texto plano en la configuración (o se espera que esté). Considerar usar DPAPI o UserSecrets para desarrollo, aunque para una app de escritorio distribuida, la ofuscación es la única defensa real si no se usa un backend proxy propio.
