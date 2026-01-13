@@ -118,4 +118,7 @@ CaptureScreen.CanvasButtons.Stroke</value>
     <data name="NotifyIcon.Title" xml:space="preserve">
         <value>NotifyIcon.Title</value>
     </data>
+    <data name="Upload.Failed" xml:space="preserve">
+        <value>Upload.Failed</value>
+    </data>
 </root>

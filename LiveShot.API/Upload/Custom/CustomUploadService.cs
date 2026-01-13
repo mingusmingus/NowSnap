@@ -1,8 +1,9 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 using System.Drawing;
-using System.IO;
 using System.Linq;
-using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using System.Web;
 using LiveShot.API.Properties;
@@ -14,27 +15,39 @@ namespace LiveShot.API.Upload.Custom
     public class CustomUploadService : IUploadService
     {
         private readonly IConfiguration _configuration;
+        private readonly HttpClient _httpClient;
 
-        public CustomUploadService(IConfiguration configuration)
+        public CustomUploadService(IConfiguration configuration, HttpClient httpClient)
         {
             _configuration = configuration;
+            _httpClient = httpClient;
         }
 
         public async Task<string> Upload(Bitmap bitmap)
         {
-            var webRequest = await CreateWebRequest(bitmap);
+            try
+            {
+                var request = CreateRequest(bitmap);
+                var response = await _httpClient.SendAsync(request);
 
-            WebResponse response = await webRequest.GetResponseAsync();
+                response.EnsureSuccessStatusCode();
 
-            Stream responseStream = response.GetResponseStream();
-            StreamReader responseReader = new(responseStream);
+                string responseString = await response.Content.ReadAsStringAsync();
 
-            await responseReader.ReadToEndAsync();
+                // Assuming the custom upload returns the link directly or we just return success message as before.
+                // The previous implementation returned Resources.Upload_Success regardless of content,
+                // but read the stream to end.
+                // We will stick to the previous behavior unless we can parse a link.
 
-            return Resources.Upload_Success;
+                return Resources.Upload_Success;
+            }
+            catch (Exception)
+            {
+                throw new Exception(Resources.Upload_Failed);
+            }
         }
 
-        private async Task<HttpWebRequest> CreateWebRequest(Bitmap bitmap)
+        private HttpRequestMessage CreateRequest(Bitmap bitmap)
         {
             string uploadType = _configuration["UploadType"] ?? throw new InvalidUploadTypeException();
 
@@ -43,51 +56,84 @@ namespace LiveShot.API.Upload.Custom
                 ?.GetSection(uploadType) ?? throw new InvalidUploadTypeException();
 
             string endpoint = uploadConfig["Endpoint"] ?? throw new InvalidUploadTypeException();
-            
-            string uploadRequestString = GetUploadRequestString(uploadConfig, bitmap);
+            string methodString = uploadConfig["Method"] ?? "POST";
+            HttpMethod method = new HttpMethod(methodString);
 
-            HttpWebRequest webRequest = (HttpWebRequest) WebRequest.Create(endpoint);
-            webRequest.Method = uploadConfig["Method"] ?? "POST";
+            var request = new HttpRequestMessage(method, endpoint);
 
             var headers = uploadConfig.GetSection("Headers")?.GetChildren();
-
             if (headers != null)
             {
                 foreach (var child in headers)
                 {
-                    webRequest.Headers.Add(child.Key, child.Value);
+                    if (child.Key != null && child.Value != null)
+                    {
+                        request.Headers.TryAddWithoutValidation(child.Key, child.Value);
+                    }
                 }
             }
-            
-            webRequest.ContentType =  uploadConfig["ContentType"] ?? "application/x-www-form-urlencoded";
-            webRequest.ServicePoint.Expect100Continue = false;
 
-            await using StreamWriter streamWriter = new(webRequest.GetRequestStream());
-            await streamWriter.WriteAsync(uploadRequestString);
+            // Determine content type (defaulting to x-www-form-urlencoded if not specified to match legacy behavior,
+            // but we can support multipart if config says so or if we want to modernize).
+            // The prompt says "Implementa la subida de imágenes usando MultipartFormDataContent".
+            // However, CustomUploadService is generic. If we force Multipart, we might break existing configs
+            // that expect x-www-form-urlencoded.
+            // But looking at the legacy implementation: it built a body string manually.
+            // Let's check the config "ContentType".
 
-            return webRequest;
-        }
+            string contentType = uploadConfig["ContentType"] ?? "application/x-www-form-urlencoded";
 
-        private static string GetUploadRequestString(IConfiguration uploadConfig, Bitmap bitmap)
-        {
             ImageConverter converter = new();
-            byte[] bytes = (byte[]) converter.ConvertTo(bitmap, typeof(byte[]));
-            
-            string uploadRequestString = $"{HttpUtility.UrlEncode(uploadConfig["BodyImageKey"] ?? "image")}=" +
-                                         Uri.EscapeDataString(Convert.ToBase64String(bytes));
+            byte[]? bytes = (byte[]?)converter.ConvertTo(bitmap, typeof(byte[]));
 
-            var body = uploadConfig.GetSection("Body")?.GetChildren();
+            if (bytes == null) throw new InvalidOperationException("Failed to convert bitmap");
 
-            if (body == null) 
-                return uploadRequestString;
-            
-            string[] bodyArray = body
-                .Select(c => $"{HttpUtility.UrlEncode(c.Key)}={HttpUtility.UrlEncode(c.Value)}")
-                .ToArray();
+            if (contentType.Contains("multipart/form-data"))
+            {
+                var multipartContent = new MultipartFormDataContent();
+                var imageContent = new ByteArrayContent(bytes);
+                imageContent.Headers.ContentType = MediaTypeHeaderValue.Parse("image/png");
 
-            uploadRequestString += "&" + string.Join("&", bodyArray);
+                string imageKey = uploadConfig["BodyImageKey"] ?? "image";
+                multipartContent.Add(imageContent, imageKey, "image.png");
 
-            return uploadRequestString;
+                var body = uploadConfig.GetSection("Body")?.GetChildren();
+                if (body != null)
+                {
+                    foreach (var child in body)
+                    {
+                         if (child.Key != null && child.Value != null)
+                         {
+                             multipartContent.Add(new StringContent(child.Value), child.Key);
+                         }
+                    }
+                }
+                request.Content = multipartContent;
+            }
+            else
+            {
+                // Fallback to x-www-form-urlencoded (Legacy behavior replication with HttpClient)
+                var kvp = new List<KeyValuePair<string, string>>();
+
+                string imageKey = uploadConfig["BodyImageKey"] ?? "image";
+                kvp.Add(new KeyValuePair<string, string>(imageKey, Convert.ToBase64String(bytes)));
+
+                var body = uploadConfig.GetSection("Body")?.GetChildren();
+                if (body != null)
+                {
+                    foreach (var child in body)
+                    {
+                        if (child.Key != null && child.Value != null)
+                        {
+                            kvp.Add(new KeyValuePair<string, string>(child.Key, child.Value));
+                        }
+                    }
+                }
+
+                request.Content = new FormUrlEncodedContent(kvp);
+            }
+
+            return request;
         }
     }
 }
