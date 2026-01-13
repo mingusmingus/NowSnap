@@ -17,6 +17,7 @@ namespace LiveShot.API
         {
             services.AddSingleton<IEventPipeline, EventPipeline>();
             services.AddSingleton<IBackgroundApplication, BackgroundApplication>();
+            services.AddHttpClient();
 
             if (configuration != null)
             {

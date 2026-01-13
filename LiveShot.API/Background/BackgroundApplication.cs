@@ -54,7 +54,11 @@ namespace LiveShot.API.Background
 
             var notifyIcon = new NotifyIcon();
 
-            notifyIcon.Icon = new System.Drawing.Icon("bg-icon.ico");
+            var streamInfo = System.Windows.Application.GetResourceStream(new Uri("pack://application:,,,/LiveShot;component/bg-icon.ico"));
+            if (streamInfo != null)
+            {
+                 notifyIcon.Icon = new System.Drawing.Icon(streamInfo.Stream);
+            }
             notifyIcon.Visible = true;
             notifyIcon.Text = Resources.NotifyIcon_Title;
 

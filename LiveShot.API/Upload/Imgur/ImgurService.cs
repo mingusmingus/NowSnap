@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.IO;
-using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Threading.Tasks;
 using LiveShot.API.Upload.Exceptions;
@@ -12,10 +13,12 @@ namespace LiveShot.API.Upload.Imgur
     public class ImgurService : IUploadService
     {
         private readonly string? _clientId;
+        private readonly HttpClient _httpClient;
 
-        public ImgurService(IConfiguration configuration)
+        public ImgurService(IConfiguration configuration, HttpClient httpClient)
         {
             _clientId = configuration.GetSection("UploadTypes")?.GetSection("Imgur")?["ClientID"];
+            _httpClient = httpClient;
         }
 
         public async Task<string> Upload(Bitmap bitmap)
@@ -23,36 +26,37 @@ namespace LiveShot.API.Upload.Imgur
             if (_clientId is null)
                 throw new InvalidClientIdException();
 
-            var webRequest = await CreateWebRequest(bitmap);
-            WebResponse response = await webRequest.GetResponseAsync();
+            var requestMessage = CreateRequestMessage(bitmap);
+            var response = await _httpClient.SendAsync(requestMessage);
 
-            Stream responseStream = response.GetResponseStream();
-            StreamReader responseReader = new(responseStream);
+            response.EnsureSuccessStatusCode();
 
-            string responseString = await responseReader.ReadToEndAsync();
-
+            string responseString = await response.Content.ReadAsStringAsync();
             var responseData = JsonSerializer.Deserialize<ImgurResponse>(responseString);
+
+            if (responseData.Data.Link is null)
+                throw new Exception("Imgur API did not return a link.");
 
             return responseData.Data.Link;
         }
 
-        private async Task<HttpWebRequest> CreateWebRequest(Bitmap bitmap)
+        private HttpRequestMessage CreateRequestMessage(Bitmap bitmap)
         {
             ImageConverter converter = new();
             byte[] bytes = ((byte[]) converter.ConvertTo(bitmap, typeof(byte[])))!;
 
-            string uploadRequestString = "image=" + Uri.EscapeDataString(Convert.ToBase64String(bytes));
+            string base64Image = Convert.ToBase64String(bytes);
 
-            HttpWebRequest webRequest = (HttpWebRequest) WebRequest.Create("https://api.imgur.com/3/image");
-            webRequest.Method = "POST";
-            webRequest.Headers.Add("Authorization", $"Client-ID {_clientId}");
-            webRequest.ContentType = "application/x-www-form-urlencoded";
-            webRequest.ServicePoint.Expect100Continue = false;
+            var request = new HttpRequestMessage(HttpMethod.Post, "https://api.imgur.com/3/image");
+            request.Headers.Authorization = new AuthenticationHeaderValue("Client-ID", _clientId);
 
-            await using StreamWriter streamWriter = new(webRequest.GetRequestStream());
-            await streamWriter.WriteAsync(uploadRequestString);
+            // Imgur API expects x-www-form-urlencoded or multipart/form-data.
+            var content = new StringContent("image=" + Uri.EscapeDataString(base64Image));
+            content.Headers.ContentType = new MediaTypeHeaderValue("application/x-www-form-urlencoded");
 
-            return webRequest;
+            request.Content = content;
+
+            return request;
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 
 <root>
     <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
@@ -29,6 +29,9 @@
     </data>
     <data name="ExportWindow.Open" xml:space="preserve">
         <value>Open</value>
+    </data>
+    <data name="ExportWindow.Uploading" xml:space="preserve">
+        <value>Uploading</value>
     </data>
     <data name="Imgur.InvalidClientIdException" xml:space="preserve">
         <value>Invalid client ID for imgur API</value>

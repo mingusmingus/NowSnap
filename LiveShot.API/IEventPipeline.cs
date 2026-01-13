@@ -6,6 +6,7 @@ namespace LiveShot.API
     public interface IEventPipeline
     {
         void Subscribe<T>(Action<Event> action);
+        void Unsubscribe<T>(Action<Event> action);
         void Dispatch<T>(object? e) where T : Event, new();
     }
 }

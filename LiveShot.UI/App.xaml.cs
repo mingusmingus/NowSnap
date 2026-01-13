@@ -81,7 +81,12 @@ namespace LiveShot.UI
         {
             string? culture = Configuration?["CultureUI"];
 
-            if (culture is not null) Thread.CurrentThread.CurrentUICulture = new CultureInfo(culture);
+            if (culture is null)
+            {
+                culture = "es-ES";
+            }
+
+            Thread.CurrentThread.CurrentUICulture = new CultureInfo(culture);
         }
 
         private void LoadConfiguration()

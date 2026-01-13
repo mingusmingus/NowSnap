@@ -27,7 +27,7 @@
                     Name="OpenBtn" />
             <Button Grid.Column="2" Content="{x:Static properties:Resources.ExportWindow_Copy}" Padding="10,0"
                     Name="CopyBtn" />
-            <TextBox Grid.Column="4" Text="Uploading" Width="150" IsReadOnly="True" Name="LinkBox" />
+            <TextBox Grid.Column="4" Text="{x:Static properties:Resources.ExportWindow_Uploading}" Width="150" IsReadOnly="True" Name="LinkBox" />
         </Grid>
     </Grid>
 </Window>
