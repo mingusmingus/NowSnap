@@ -216,4 +216,7 @@
   <data name="NotifyIcon.Title" xml:space="preserve">
     <value>LiveShot</value>
   </data>
+  <data name="Upload.Failed" xml:space="preserve">
+    <value>Upload.Failed</value>
+  </data>
 </root>

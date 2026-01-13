@@ -341,6 +341,15 @@ namespace LiveShot.API.Properties {
         }
         
         /// <summary>
+        ///   Busca una cadena traducida similar a Upload.Failed.
+        /// </summary>
+        public static string Upload_Failed {
+            get {
+                return ResourceManager.GetString("Upload.Failed", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Busca una cadena traducida similar a Upload.InvalidUploadType.
         /// </summary>
         public static string Upload_InvalidUpload_Type {

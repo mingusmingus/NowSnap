@@ -36,7 +36,7 @@ namespace LiveShot.API.Upload.Imgur
                 string responseString = await response.Content.ReadAsStringAsync();
                 var responseData = JsonSerializer.Deserialize<ImgurResponse>(responseString);
 
-                if (responseData?.Data?.Link is null)
+                if (response != null && response.IsSuccessStatusCode)
                     throw new Exception(Properties.Resources.Upload_Failed);
 
                 return responseData.Data.Link;
