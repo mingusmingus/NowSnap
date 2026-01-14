@@ -22,6 +22,22 @@ namespace LiveShot.API.Background
             _onExit = () => { };
         }
 
+        /// <summary>
+        /// Reduces the working set of the process to minimize memory usage.
+        /// Should be called when the application is minimized to the system tray.
+        /// </summary>
+        public static void FlushMemory()
+        {
+            try
+            {
+                System.Diagnostics.Process.GetCurrentProcess().MinWorkingSet = nint.Zero;
+            }
+            catch
+            {
+                // Silently fail if unable to reduce working set
+            }
+        }
+
         public void Run()
         {
             // Implementación básica del System Tray desde API
