@@ -69,25 +69,36 @@ namespace LiveShot.UI.Views
         private void HotkeyButton_Click(object sender, RoutedEventArgs e)
         {
             HotkeyButton.Content = "Presione teclas...";
-            this.KeyDown += OnHotkeyPress;
+            this.PreviewKeyDown += OnHotkeyPress;
         }
 
         private void OnHotkeyPress(object sender, KeyEventArgs e)
         {
-            // If only modifier keys are pressed, return and wait for the actual key
-            if (e.Key == Key.LeftCtrl || e.Key == Key.RightCtrl ||
-                e.Key == Key.LeftAlt || e.Key == Key.RightAlt ||
-                e.Key == Key.LeftShift || e.Key == Key.RightShift ||
-                e.Key == Key.LWin || e.Key == Key.RWin ||
-                e.Key == Key.System) // System key (Alt)
-            {
-                return;
-            }
+            e.Handled = true;
 
             var key = e.Key == Key.System ? e.SystemKey : e.Key;
             var modifiers = Keyboard.Modifiers;
 
-            // Map WPF Key to Virtual Key Code
+            // Check if the key is a modifier key
+            if (key == Key.LeftCtrl || key == Key.RightCtrl ||
+                key == Key.LeftAlt || key == Key.RightAlt ||
+                key == Key.LeftShift || key == Key.RightShift ||
+                key == Key.LWin || key == Key.RWin ||
+                key == Key.System)
+            {
+                // Only update display to show modifiers (e.g. "Ctrl + Shift + ...")
+                var sb = new StringBuilder();
+                if ((modifiers & ModifierKeys.Control) == ModifierKeys.Control) sb.Append("Ctrl + ");
+                if ((modifiers & ModifierKeys.Shift) == ModifierKeys.Shift) sb.Append("Shift + ");
+                if ((modifiers & ModifierKeys.Alt) == ModifierKeys.Alt) sb.Append("Alt + ");
+                if ((modifiers & ModifierKeys.Windows) == ModifierKeys.Windows) sb.Append("Win + ");
+                sb.Append("...");
+
+                HotkeyButton.Content = sb.ToString();
+                return;
+            }
+
+            // Final key pressed - save and finish
             int virtualKey = KeyInterop.VirtualKeyFromKey(key);
 
             Settings.Default.Hotkey = virtualKey;
@@ -95,8 +106,7 @@ namespace LiveShot.UI.Views
 
             HotkeyButton.Content = FormatHotkeyString(modifiers, key);
 
-            this.KeyDown -= OnHotkeyPress;
-            e.Handled = true;
+            this.PreviewKeyDown -= OnHotkeyPress;
         }
 
         private void SetStartup(bool enable)
