@@ -175,11 +175,23 @@ namespace LiveShot.UI.Views
                 ((int, int, int, int))(Top, Left, Width, Height);
 
             var bitmap = ImageUtils.CaptureScreen(screenWidth, screenHeight, screenLeft, screenTop);
-            var bitmapSource = ImageUtils.GetBitmapSource(bitmap);
+
+            // Optimization: Load BitmapImage with OnLoad and Freeze to avoid locking the source and reduce GDI overhead
+            var bitmapImage = new BitmapImage();
+            using (var memory = new System.IO.MemoryStream())
+            {
+                bitmap.Save(memory, System.Drawing.Imaging.ImageFormat.Bmp);
+                memory.Position = 0;
+                bitmapImage.BeginInit();
+                bitmapImage.StreamSource = memory;
+                bitmapImage.CacheOption = BitmapCacheOption.OnLoad;
+                bitmapImage.EndInit();
+                bitmapImage.Freeze();
+            }
 
             _screenShot = bitmap;
 
-            SelectCanvas.Background = new ImageBrush(bitmapSource);
+            SelectCanvas.Background = new ImageBrush(bitmapImage);
 
             _liveShotService.ScreenShot = bitmap;
         }
