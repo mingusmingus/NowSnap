@@ -36,5 +36,17 @@ namespace LiveShot.UI.Properties {
                 this["Hotkey"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int HotkeyModifiers {
+            get {
+                return ((int)(this["HotkeyModifiers"]));
+            }
+            set {
+                this["HotkeyModifiers"] = value;
+            }
+        }
     }
 }

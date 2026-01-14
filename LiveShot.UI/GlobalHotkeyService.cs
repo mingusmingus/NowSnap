@@ -36,9 +36,14 @@ namespace LiveShot.UI
         {
             Unregister(); // Clear existing
             int vk = Settings.Default.Hotkey;
+            uint modifiers = (uint)Settings.Default.HotkeyModifiers;
+
             if (vk > 0)
             {
-                bool result = RegisterHotKey(_windowHandle, HOTKEY_ID, MOD_NONE, (uint)vk);
+                // ModifierKeys enum values match Win32 API (except checking specifics if needed)
+                // Win32: Alt=1, Ctrl=2, Shift=4, Win=8
+                // WPF ModifierKeys: Alt=1, Control=2, Shift=4, Windows=8
+                bool result = RegisterHotKey(_windowHandle, HOTKEY_ID, modifiers, (uint)vk);
                 return result;
             }
             return false;
