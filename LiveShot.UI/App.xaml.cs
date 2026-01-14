@@ -175,7 +175,7 @@ namespace LiveShot.UI
         {
             var builder = new ConfigurationBuilder()
           .SetBasePath(AppDomain.CurrentDomain.BaseDirectory) 
-          .AddJsonFile("appsettings.json", false, true);
+          .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
 
             Configuration = builder.Build();
         }
