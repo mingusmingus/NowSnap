@@ -63,6 +63,11 @@ namespace LiveShot.UI.Views
                 Root = e,
                 Window = this
             });
+
+            // Forzar limpieza profunda tras cerrar la ventana pesada
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
         }
 
         public void Upload(Bitmap bitmap, bool google)
